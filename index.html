@@ -567,7 +567,7 @@
       return res;
     }).catch(function(err){
       setSyncState('err');
-      toast('同期に失敗しました。通信環境をご確認ください');
+      toast('同期に失敗しました: ' + (err && err.message ? err.message : err));
       console.warn(action, err);
       throw err;
     });
