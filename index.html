@@ -547,10 +547,12 @@
     });
   }
 
+  var pendingRemovals = {};
+
   function applyServerData(data){
     if (!data) return;
     if (data.categories) state.categories = data.categories;
-    if (data.items) state.items = data.items;
+    if (data.items) state.items = data.items.filter(function(it){ return !pendingRemovals[it.id]; });
     if (data.templates) state.templates = data.templates;
     saveCache();
   }
@@ -771,12 +773,15 @@
   function handleCheck(item){
     var row = $main.querySelector('.item-row[data-id="' + cssEscape(item.id) + '"]');
     if (row) row.classList.add('checked');
+    pendingRemovals[item.id] = true;
     setTimeout(function(){
       state.items = state.items.filter(function(it){ return it.id !== item.id; });
       saveCache();
       render();
     }, 380);
-    mutate('checkItem', { id: item.id }).catch(function(){});
+    mutate('checkItem', { id: item.id }).catch(function(){}).then(function(){
+      delete pendingRemovals[item.id];
+    });
   }
 
   function cssEscape(s){ return String(s).replace(/["\\]/g, '\\$&'); }
