@@ -548,11 +548,16 @@
   }
 
   var pendingRemovals = {};
+  var pendingAdds = {};
 
   function applyServerData(data){
     if (!data) return;
     if (data.categories) state.categories = data.categories;
-    if (data.items) state.items = data.items.filter(function(it){ return !pendingRemovals[it.id]; });
+    if (data.items) {
+      var items = data.items.filter(function(it){ return !pendingRemovals[it.id]; });
+      Object.keys(pendingAdds).forEach(function(tempId){ items.push(pendingAdds[tempId]); });
+      state.items = items;
+    }
     if (data.templates) state.templates = data.templates;
     saveCache();
   }
@@ -630,10 +635,13 @@
     var cat = categoryById(tpl.categoryId);
     if (!cat){ toast('このカテゴリは削除されています'); return; }
     var tempId = 'tmp_' + Date.now();
-    state.items.push({ id: tempId, name: tpl.name, categoryId: tpl.categoryId, status: 'active' });
+    var tempItem = { id: tempId, name: tpl.name, categoryId: tpl.categoryId, status: 'active' };
+    pendingAdds[tempId] = tempItem;
+    state.items.push(tempItem);
     render();
     toast('追加しました: ' + tpl.name);
-    mutate('addItem', { name: tpl.name, categoryId: tpl.categoryId }).catch(function(){
+    mutate('addItem', { name: tpl.name, categoryId: tpl.categoryId }).catch(function(){}).then(function(){
+      delete pendingAdds[tempId];
       state.items = state.items.filter(function(it){ return it.id !== tempId; });
       render();
     });
@@ -758,10 +766,13 @@
     }
     var catId = state.selectedCategoryId;
     var tempId = 'tmp_' + Date.now();
-    state.items.push({ id: tempId, name: name, categoryId: catId, status: 'active' });
+    var tempItem = { id: tempId, name: name, categoryId: catId, status: 'active' };
+    pendingAdds[tempId] = tempItem;
+    state.items.push(tempItem);
     render();
     $itemInput.value = '';
-    mutate('addItem', { name: name, categoryId: catId }).catch(function(){
+    mutate('addItem', { name: name, categoryId: catId }).catch(function(){}).then(function(){
+      delete pendingAdds[tempId];
       state.items = state.items.filter(function(it){ return it.id !== tempId; });
       render();
     });
