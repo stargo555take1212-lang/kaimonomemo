@@ -89,9 +89,17 @@
     padding: 10px 16px 2px;
   }
   .fav-title{
-    font-size:11px; color: var(--ink-soft); display:flex; align-items:center; gap:5px;
+    font-size:11px; color: var(--ink-soft); display:flex; align-items:center; justify-content:space-between;
     margin-bottom:7px; letter-spacing:.03em;
   }
+  .fav-manage-link{ cursor:pointer; }
+  .fav-group{ margin-bottom:8px; }
+  .fav-group:last-child{ margin-bottom:0; }
+  .fav-group-title{
+    font-size:11.5px; color: var(--ink-soft); display:flex; align-items:center; gap:5px;
+    margin-bottom:5px;
+  }
+  .fav-group-title .cat-dot{ width:8px; height:8px; }
   .fav-row{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
   .fav-row::-webkit-scrollbar{ display:none; }
   .fav-chip{
@@ -102,11 +110,6 @@
   }
   .fav-chip:active{ transform: scale(0.93); }
   .fav-chip .cat-dot{ width:8px; height:8px; }
-  .fav-manage-chip{
-    flex-shrink:0; display:flex; align-items:center; gap:4px;
-    padding:8px 14px; border-radius:999px; font-size:13px;
-    background: transparent; border:1.5px dashed var(--line); color:var(--ink-soft);
-  }
 
   .empty-state{
     text-align:center; padding: 60px 20px; color: var(--ink-soft);
@@ -329,8 +332,11 @@
   </header>
 
   <div class="fav-wrap" id="favWrap" style="display:none;">
-    <div class="fav-title">⭐ よく使うもの</div>
-    <div class="fav-row" id="favRow"></div>
+    <div class="fav-title">
+      <span>⭐ よく使うもの</span>
+      <span class="fav-manage-link" id="favManageLink">✎ 管理</span>
+    </div>
+    <div id="favGroups"></div>
   </div>
 
   <main id="main">
@@ -461,7 +467,9 @@
   var moveItemTargetId = null;
   var selectedSwatchColor = PALETTE[0];
   var $favWrap = document.getElementById('favWrap');
-  var $favRow = document.getElementById('favRow');
+  var $favGroups = document.getElementById('favGroups');
+  var $favManageLink = document.getElementById('favManageLink');
+  $favManageLink.addEventListener('click', function(){ openFavManage(); });
   var $starBtn = document.getElementById('starBtn');
   var $favOverlay = document.getElementById('favOverlay');
   var $favManageList = document.getElementById('favManageList');
@@ -588,21 +596,31 @@
       return;
     }
     $favWrap.style.display = '';
-    $favRow.innerHTML = '';
-    state.templates.forEach(function(tpl){
-      var cat = categoryById(tpl.categoryId);
-      var chip = document.createElement('div');
-      chip.className = 'fav-chip';
-      chip.style.setProperty('--cat-color', cat ? cat.color : PALETTE[0]);
-      chip.innerHTML = '<span class="cat-dot"></span>' + escapeHtml(tpl.name);
-      chip.addEventListener('click', function(){ quickAddFromTemplate(tpl); });
-      $favRow.appendChild(chip);
+    $favGroups.innerHTML = '';
+    state.categories.forEach(function(cat){
+      var tpls = state.templates.filter(function(t){ return t.categoryId === cat.id; });
+      if (!tpls.length) return;
+      var group = document.createElement('div');
+      group.className = 'fav-group';
+
+      var label = document.createElement('div');
+      label.className = 'fav-group-title';
+      label.innerHTML = '<span class="cat-dot" style="background:' + cat.color + '"></span>' + escapeHtml(cat.name);
+      group.appendChild(label);
+
+      var row = document.createElement('div');
+      row.className = 'fav-row';
+      tpls.forEach(function(tpl){
+        var chip = document.createElement('div');
+        chip.className = 'fav-chip';
+        chip.style.setProperty('--cat-color', cat.color);
+        chip.innerHTML = '<span class="cat-dot"></span>' + escapeHtml(tpl.name);
+        chip.addEventListener('click', function(){ quickAddFromTemplate(tpl); });
+        row.appendChild(chip);
+      });
+      group.appendChild(row);
+      $favGroups.appendChild(group);
     });
-    var manageChip = document.createElement('div');
-    manageChip.className = 'fav-manage-chip';
-    manageChip.textContent = '✎ 管理';
-    manageChip.addEventListener('click', function(){ openFavManage(); });
-    $favRow.appendChild(manageChip);
   }
 
   function quickAddFromTemplate(tpl){
