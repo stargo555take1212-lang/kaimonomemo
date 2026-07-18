@@ -178,7 +178,8 @@
   .checkbox:active{ transform: scale(0.85); }
   .item-name{ flex:1; font-size:15.5px; line-height:1.4; word-break: break-word; }
   .drag-handle{
-    color: var(--ink-soft); opacity:.5; font-size:18px; padding:6px;
+    color: var(--ink-soft); opacity:.5; font-size:18px; padding:12px 10px;
+    margin: -6px -4px;
     cursor:grab; touch-action:none;
     letter-spacing:-2px;
   }
@@ -833,7 +834,6 @@
     handle.addEventListener('pointerdown', function(e){
       e.preventDefault();
       activePointerId = e.pointerId;
-      try { handle.setPointerCapture(activePointerId); } catch(err){}
       row.classList.add('dragging');
       ghost = document.createElement('div');
       ghost.className = 'drag-ghost';
@@ -841,9 +841,12 @@
       document.body.appendChild(ghost);
       positionGhost(e.clientX, e.clientY);
 
-      handle.addEventListener('pointermove', onMove);
-      handle.addEventListener('pointerup', onUp);
-      handle.addEventListener('pointercancel', onUp);
+      // 指がハンドルから離れても追跡できるよう、window全体でmove/up/cancelを監視する
+      // (スマホによってはsetPointerCaptureが効かず、ハンドル上でしかイベントを拾えないと
+      //  ゴースト表示が消えないまま残ってしまうことがあるため)
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
     });
 
     function positionGhost(x, y){
@@ -863,9 +866,10 @@
 
     function onUp(e){
       if (e.pointerId !== activePointerId) return;
-      handle.removeEventListener('pointermove', onMove);
-      handle.removeEventListener('pointerup', onUp);
-      handle.removeEventListener('pointercancel', onUp);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      activePointerId = null;
       row.classList.remove('dragging');
       var el = document.elementFromPoint(e.clientX, e.clientY);
       var section = el ? el.closest('.category-section') : null;
