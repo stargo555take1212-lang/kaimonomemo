@@ -1,0 +1,13 @@
+{
+  "name": "買い物メモ",
+  "short_name": "買い物メモ",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#EFF2EB",
+  "theme_color": "#EFF2EB",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
