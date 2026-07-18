@@ -69,15 +69,6 @@
   .brand{ display:flex; align-items:baseline; gap:8px; }
   .brand .title{ font-size:22px; font-weight:400; color:var(--ink); letter-spacing:.02em; }
   .brand .sub{ font-size:11px; color:var(--ink-soft); }
-  .icon-btn{
-    width:40px; height:40px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    background: var(--paper-raised); border:1px solid var(--line);
-    box-shadow: var(--shadow);
-    cursor:pointer; color:var(--ink); font-size:18px;
-    transition: transform .15s ease;
-  }
-  .icon-btn:active{ transform: scale(0.9); }
   #syncDot{
     width:8px; height:8px; border-radius:50%; background:#B9C2B4;
     display:inline-block; margin-right:6px; transition: background .3s;
@@ -87,6 +78,11 @@
 
   main{ flex:1; padding: 14px 16px 8px; }
 
+  .footer-settings{
+    text-align:center; padding:20px 16px 10px; font-size:13px; color:var(--ink-soft);
+  }
+  .footer-settings:active{ opacity:.6; }
+
   .fav-wrap{
     padding: 10px 16px 2px;
   }
@@ -94,7 +90,12 @@
     font-size:11px; color: var(--ink-soft); display:flex; align-items:center; justify-content:space-between;
     margin-bottom:7px; letter-spacing:.03em;
   }
-  .fav-manage-link{ cursor:pointer; }
+  .fav-manage-link{
+    cursor:pointer; color:var(--accent); font-size:12px; font-weight:700;
+    padding:5px 11px; border:1.5px solid var(--accent); border-radius:999px;
+    flex-shrink:0;
+  }
+  .fav-manage-link:active{ opacity:.6; }
   .fav-group{ margin-bottom:8px; }
   .fav-group:last-child{ margin-bottom:0; }
   .fav-group-title{
@@ -341,7 +342,6 @@
       <span class="title">買い物メモ</span>
       <span class="sub"><span id="syncDot"></span><span id="syncLabel">未設定</span></span>
     </div>
-    <div class="icon-btn" id="settingsBtn" aria-label="設定">⚙️</div>
   </header>
 
   <div class="fav-wrap" id="favWrap" style="display:none;">
@@ -355,6 +355,8 @@
   <main id="main">
     <!-- カテゴリセクションはJSで描画 -->
   </main>
+
+  <div class="footer-settings" id="footerSettings">⚙️ スプレッドシート連携の設定</div>
 
   <div class="composer">
     <div class="composer-inner">
@@ -462,7 +464,7 @@
   var $toast = document.getElementById('toast');
   var $syncDot = document.getElementById('syncDot');
   var $syncLabel = document.getElementById('syncLabel');
-  var $settingsBtn = document.getElementById('settingsBtn');
+  var $settingsBtn = document.getElementById('footerSettings');
   var $settingsOverlay = document.getElementById('settingsOverlay');
   var $gasUrl = document.getElementById('gasUrl');
   var $gasStatus = document.getElementById('gasStatus');
