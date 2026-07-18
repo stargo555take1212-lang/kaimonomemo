@@ -145,6 +145,9 @@ function doPost(e) {
       case 'deleteTemplate':
         result = deleteTemplate(body.id);
         break;
+      case 'swapTemplateOrder':
+        result = swapTemplateOrder(body.idA, body.idB);
+        break;
       default:
         return jsonResponse({ error: 'unknown action' }, 400);
     }
@@ -259,6 +262,18 @@ function deleteTemplate(id) {
   if (row === -1) throw new Error('template not found');
   sheet.deleteRow(row);
   return { id: id };
+}
+
+function swapTemplateOrder(idA, idB) {
+  const sheet = getSheet(TEMPLATE_SHEET);
+  const rowA = findRowIndexById(sheet, idA);
+  const rowB = findRowIndexById(sheet, idB);
+  if (rowA === -1 || rowB === -1) throw new Error('template not found');
+  const orderA = sheet.getRange(rowA, 4).getValue();
+  const orderB = sheet.getRange(rowB, 4).getValue();
+  sheet.getRange(rowA, 4).setValue(orderB);
+  sheet.getRange(rowB, 4).setValue(orderA);
+  return { ok: true };
 }
 
 /* ---------- アイテム ---------- */

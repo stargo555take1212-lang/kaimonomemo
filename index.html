@@ -258,7 +258,16 @@
     padding:10px 4px; border-bottom:1px solid var(--line); font-size:14.5px;
   }
   .fav-manage-list li .del-x{ margin-left:auto; color: var(--ink-soft); font-size:16px; padding:6px; }
+  .fav-manage-list li .del-x.disabled{ opacity:.35; pointer-events:none; }
+  .fav-item-name{ flex:1; }
+  .fav-order-btns{ display:flex; flex-direction:column; gap:2px; flex-shrink:0; }
+  .order-btn{
+    font-size:11px; color:var(--ink-soft); padding:2px 5px; line-height:1;
+    border:1px solid var(--line); border-radius:5px; background:var(--paper);
+  }
+  .order-btn.disabled{ opacity:.3; pointer-events:none; }
   .fav-add-form{ margin-top:14px; padding-top:14px; border-top:1px dashed var(--line); }
+  .fav-add-form .input-row{ margin-top:6px; }
 
   /* モーダル */
   .overlay{
@@ -296,6 +305,7 @@
   .btn.primary{ background: var(--accent); color:#fff; }
   .btn.ghost{ background: var(--paper); color: var(--ink-soft); }
   .btn.danger{ background: transparent; color: var(--danger); font-weight:400; font-size:13px; flex:none; }
+  .btn:disabled{ opacity:.55; }
   .status-line{ font-size:12.5px; color:var(--ink-soft); margin-top:4px; line-height:1.6; }
   .status-line a{ color: var(--accent); }
   .close-x{ position:absolute; top:14px; right:16px; color:var(--ink-soft); font-size:20px; }
@@ -399,14 +409,13 @@
       <h2>よく使うものを管理</h2>
       <div class="close-x" data-close="favOverlay">✕</div>
     </div>
+    <div class="chip-row" id="favTabRow" style="overflow-x:auto;"></div>
     <ul class="fav-manage-list" id="favManageList"></ul>
     <div class="fav-add-form">
-      <label for="favNameInput">追加する品名</label>
-      <input type="text" id="favNameInput" placeholder="例: 醤油" maxlength="60">
-      <label>お店・カテゴリ</label>
-      <div class="chip-row" id="favCatChipRow" style="overflow-x:auto;"></div>
-      <div class="actions">
-        <button class="btn primary" id="saveFavBtn" style="margin-left:auto;">登録する</button>
+      <label for="favNameInput">追加する品名(上で選んだお店に登録されます)</label>
+      <div class="input-row">
+        <input type="text" id="favNameInput" placeholder="例: 醤油" maxlength="60">
+        <button class="btn primary" id="saveFavBtn">登録する</button>
       </div>
     </div>
   </div>
@@ -474,7 +483,7 @@
   var $favOverlay = document.getElementById('favOverlay');
   var $favManageList = document.getElementById('favManageList');
   var $favNameInput = document.getElementById('favNameInput');
-  var $favCatChipRow = document.getElementById('favCatChipRow');
+  var $favTabRow = document.getElementById('favTabRow');
   var $saveFavBtn = document.getElementById('saveFavBtn');
   var selectedFavCategoryId = null;
 
@@ -930,40 +939,14 @@
   function openFavManage(prefillName){
     selectedFavCategoryId = state.selectedCategoryId || (state.categories[0] && state.categories[0].id) || null;
     $favNameInput.value = prefillName || '';
+    renderFavTabs();
     renderFavManageList();
-    renderFavCatChips();
     openOverlay('favOverlay');
     if (prefillName){ setTimeout(function(){ $favNameInput.focus(); }, 100); }
   }
 
-  function renderFavManageList(){
-    $favManageList.innerHTML = '';
-    if (state.templates.length === 0){
-      var li = document.createElement('li');
-      li.style.color = 'var(--ink-soft)';
-      li.style.fontSize = '13.5px';
-      li.textContent = 'まだ登録されていません。下のフォームから追加できます';
-      $favManageList.appendChild(li);
-      return;
-    }
-    state.templates.forEach(function(tpl){
-      var cat = categoryById(tpl.categoryId);
-      var li = document.createElement('li');
-      li.innerHTML =
-        '<span class="cat-dot" style="background:' + (cat ? cat.color : '#ccc') + '"></span>' +
-        '<span>' + escapeHtml(tpl.name) + (cat ? '<span style="color:var(--ink-soft);font-size:12px;"> ・' + escapeHtml(cat.name) + '</span>' : '') + '</span>' +
-        '<span class="del-x">✕</span>';
-      li.querySelector('.del-x').addEventListener('click', function(){
-        mutate('deleteTemplate', { id: tpl.id }).then(function(){
-          renderFavManageList();
-        });
-      });
-      $favManageList.appendChild(li);
-    });
-  }
-
-  function renderFavCatChips(){
-    $favCatChipRow.innerHTML = '';
+  function renderFavTabs(){
+    $favTabRow.innerHTML = '';
     state.categories.forEach(function(cat){
       var chip = document.createElement('div');
       chip.className = 'chip' + (cat.id === selectedFavCategoryId ? ' selected' : '');
@@ -971,9 +954,74 @@
       chip.innerHTML = '<span class="cat-dot"></span>' + escapeHtml(cat.name);
       chip.addEventListener('click', function(){
         selectedFavCategoryId = cat.id;
-        renderFavCatChips();
+        renderFavTabs();
+        renderFavManageList();
       });
-      $favCatChipRow.appendChild(chip);
+      $favTabRow.appendChild(chip);
+    });
+  }
+
+  function renderFavManageList(){
+    $favManageList.innerHTML = '';
+    var tpls = state.templates.filter(function(t){ return t.categoryId === selectedFavCategoryId; });
+    if (!tpls.length){
+      var empty = document.createElement('li');
+      empty.style.color = 'var(--ink-soft)';
+      empty.style.fontSize = '13.5px';
+      empty.textContent = 'このお店にはまだ登録されていません。下のフォームから追加できます';
+      $favManageList.appendChild(empty);
+      return;
+    }
+    tpls.forEach(function(tpl, idx){
+      var li = document.createElement('li');
+      li.innerHTML =
+        '<span class="fav-order-btns">' +
+          '<span class="order-btn up' + (idx === 0 ? ' disabled' : '') + '">▲</span>' +
+          '<span class="order-btn down' + (idx === tpls.length - 1 ? ' disabled' : '') + '">▼</span>' +
+        '</span>' +
+        '<span class="fav-item-name">' + escapeHtml(tpl.name) + '</span>' +
+        '<span class="del-x">✕</span>';
+      if (idx > 0){
+        li.querySelector('.up').addEventListener('click', function(){ swapTemplateOrder(tpl, tpls[idx - 1]); });
+      }
+      if (idx < tpls.length - 1){
+        li.querySelector('.down').addEventListener('click', function(){ swapTemplateOrder(tpl, tpls[idx + 1]); });
+      }
+      var delBtn = li.querySelector('.del-x');
+      delBtn.addEventListener('click', function(){
+        if (delBtn.classList.contains('disabled')) return;
+        delBtn.classList.add('disabled');
+        li.style.opacity = '.4';
+        mutate('deleteTemplate', { id: tpl.id }).then(function(){
+          renderFavManageList();
+        }).catch(function(){
+          delBtn.classList.remove('disabled');
+          li.style.opacity = '';
+        });
+      });
+      $favManageList.appendChild(li);
+    });
+  }
+
+  function swapTemplateOrder(a, b){
+    var ia = state.templates.indexOf(a);
+    var ib = state.templates.indexOf(b);
+    state.templates[ia] = b;
+    state.templates[ib] = a;
+    var orderA = a.order, orderB = b.order;
+    a.order = orderB;
+    b.order = orderA;
+    renderFavManageList();
+    renderFavBar();
+    mutate('swapTemplateOrder', { idA: a.id, idB: b.id }).then(function(){
+      renderFavManageList();
+    }).catch(function(){
+      state.templates[ia] = a;
+      state.templates[ib] = b;
+      a.order = orderA;
+      b.order = orderB;
+      renderFavManageList();
+      renderFavBar();
     });
   }
 
@@ -982,10 +1030,15 @@
     if (!name){ toast('品名を入力してください'); return; }
     if (!selectedFavCategoryId){ toast('お店・カテゴリを選んでください'); return; }
     if (!getUrl()){ toast('先に設定からURLを登録してください'); openOverlay('settingsOverlay'); return; }
+    $saveFavBtn.disabled = true;
+    $saveFavBtn.textContent = '登録中…';
     mutate('addTemplate', { name: name, categoryId: selectedFavCategoryId }).then(function(){
       $favNameInput.value = '';
       renderFavManageList();
       toast('「' + name + '」を登録しました');
+    }).catch(function(){}).then(function(){
+      $saveFavBtn.disabled = false;
+      $saveFavBtn.textContent = '登録する';
     });
   });
 
