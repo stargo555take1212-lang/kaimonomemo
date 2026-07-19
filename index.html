@@ -1099,6 +1099,15 @@
   });
 
   /* ---------- 初期化 ---------- */
+  // 招待リンク(?gas=...)でURLが渡された場合は自動で保存し、アドレスバーからは消す
+  (function applyInviteLink(){
+    var gasParam = new URLSearchParams(location.search).get('gas');
+    if (gasParam) {
+      setUrl(gasParam);
+      history.replaceState(null, '', location.pathname);
+    }
+  })();
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('sw.js').catch(function () {});
