@@ -114,54 +114,67 @@ function doPost(e) {
     return jsonResponse({ error: 'invalid json' }, 400);
   }
 
-  const action = body.action;
-  let result;
+  // 家族の複数端末から同時に操作されると、行番号を数えている途中に別の変更で
+  // 行がずれてしまうことがあるため、書き込み中は他のリクエストを待たせる
+  const lock = LockService.getScriptLock();
   try {
-    switch (action) {
-      case 'addItem':
-        result = addItem(body.name, body.categoryId);
-        break;
-      case 'checkItem':
-        result = checkItem(body.id);
-        break;
-      case 'deleteItem':
-        result = deleteItem(body.id);
-        break;
-      case 'moveItem':
-        result = moveItem(body.id, body.categoryId);
-        break;
-      case 'addCategory':
-        result = addCategory(body.name, body.color);
-        break;
-      case 'updateCategory':
-        result = updateCategory(body.id, body.name, body.color);
-        break;
-      case 'deleteCategory':
-        result = deleteCategory(body.id);
-        break;
-      case 'addTemplate':
-        result = addTemplate(body.name, body.categoryId);
-        break;
-      case 'deleteTemplate':
-        result = deleteTemplate(body.id);
-        break;
-      case 'swapTemplateOrder':
-        result = swapTemplateOrder(body.idA, body.idB);
-        break;
-      default:
-        return jsonResponse({ error: 'unknown action' }, 400);
-    }
+    lock.waitLock(10000);
   } catch (err) {
-    return jsonResponse({ error: String(err) }, 500);
+    return jsonResponse({ error: '他の操作と重なりました。もう一度お試しください' }, 429);
   }
 
-  return jsonResponse({
-    ok: true,
-    result: result,
-    categories: getCategories(),
-    items: getItems(),
-    templates: getTemplates(),
-  });
+  try {
+    const action = body.action;
+    let result;
+    try {
+      switch (action) {
+        case 'addItem':
+          result = addItem(body.name, body.categoryId);
+          break;
+        case 'checkItem':
+          result = checkItem(body.id);
+          break;
+        case 'deleteItem':
+          result = deleteItem(body.id);
+          break;
+        case 'moveItem':
+          result = moveItem(body.id, body.categoryId);
+          break;
+        case 'addCategory':
+          result = addCategory(body.name, body.color);
+          break;
+        case 'updateCategory':
+          result = updateCategory(body.id, body.name, body.color);
+          break;
+        case 'deleteCategory':
+          result = deleteCategory(body.id);
+          break;
+        case 'addTemplate':
+          result = addTemplate(body.name, body.categoryId);
+          break;
+        case 'deleteTemplate':
+          result = deleteTemplate(body.id);
+          break;
+        case 'swapTemplateOrder':
+          result = swapTemplateOrder(body.idA, body.idB);
+          break;
+        default:
+          return jsonResponse({ error: 'unknown action' }, 400);
+      }
+    } catch (err) {
+      return jsonResponse({ error: String(err) }, 500);
+    }
+
+    return jsonResponse({
+      ok: true,
+      result: result,
+      categories: getCategories(),
+      items: getItems(),
+      templates: getTemplates(),
+    });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /* ---------- ヘルパー ---------- */
